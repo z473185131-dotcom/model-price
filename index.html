@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>模型价格计算器</title>
+<style>
+  :root {
+    --accent: #4f46e5;
+    --accent-soft: #eef2ff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --miss: #6366f1;
+    --hit: #10b981;
+    --out: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  header {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 36px 20px 20px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 28px; }
+  header p { margin: 0; color: var(--muted); font-size: 15px; }
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 880px) {
+    main { grid-template-columns: 1fr 1fr; align-items: start; }
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, .05);
+  }
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+  }
+  .group-title {
+    margin: 20px 0 12px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+  .group-title:first-of-type { margin-top: 16px; }
+  .hint { margin: 0 0 14px; font-size: 12px; color: var(--muted); }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .input-row { display: flex; align-items: center; gap: 10px; }
+  input[type="number"],
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+  }
+  input[type="number"]:focus,
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .unit { flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .ratio-row { display: flex; align-items: center; gap: 8px; }
+  .ratio-row .colon { font-size: 16px; color: var(--muted); }
+  .ratio-row input { width: 90px; flex: none; }
+  .ratio-row .unit { margin-left: 2px; }
+  input[type="range"] {
+    width: 100%;
+    margin-top: 10px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .result-total {
+    margin: 14px 0 2px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .result-total strong {
+    display: block;
+    font-size: 40px;
+    line-height: 1.2;
+    color: var(--accent);
+    letter-spacing: -.01em;
+  }
+  .result-perm { margin: 0 0 18px; font-size: 14px; color: var(--muted); }
+  .result-perm b { color: var(--text); font-size: 16px; }
+  .bar {
+    display: flex;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--border);
+  }
+  .bar span { display: block; height: 100%; min-width: 0; }
+  .bar .seg-miss { background: var(--miss); }
+  .bar .seg-hit { background: var(--hit); }
+  .bar .seg-out { background: var(--out); }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 12px 0 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .legend i {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    margin-right: 6px;
+  }
+  .dot-miss { background: var(--miss); }
+  .dot-hit { background: var(--hit); }
+  .dot-out { background: var(--out); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 9px 4px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  tr:last-child td { border-bottom: none; font-weight: 700; }
+  footer {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px 48px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  footer h3 { margin: 0 0 8px; font-size: 14px; color: var(--text); }
+  footer code {
+    display: block;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.9;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>模型价格计算器</h1>
+  <p>按 Token 单价、输入输出比例与缓存命中率，实时估算调用成本（元）</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>参数设置</h2>
+
+    <div class="group-title">价格（元 / 百万 tokens）</div>
+    <p class="hint">默认置 0，请按目标模型的实际单价填写。</p>
+
+    <div class="field">
+      <label for="priceIn">输入价格</label>
+      <div class="input-row">
+        <input id="priceIn" type="number" min="0" step="any" value="0">
+        <span class="unit">元 / 百万 tokens</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="priceOut">输出价格</label>
+      <div class="input-row">
+        <input id="priceOut" type="number" min="0" step="any" value="0">
+        <span class="unit">元 / 百万 tokens</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="priceCache">缓存价格（输入缓存命中）</label>
+      <div class="input-row">
+        <input id="priceCache" type="number" min="0" step="any" value="0">
+        <span class="unit">元 / 百万 tokens</span>
+      </div>
+    </div>
+
+    <div class="group-title">用量结构</div>
+
+    <div class="field">
+      <label for="totalTokens">Token 总量</label>
+      <div class="input-row">
+        <input id="totalTokens" type="text" inputmode="decimal" value="1000000">
+        <span class="unit">个 tokens</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>输入 : 输出比例</label>
+      <div class="ratio-row">
+        <input id="ratioIn" type="number" min="0" step="any" value="0" aria-label="输入比例">
+        <span class="colon">：</span>
+        <input id="ratioOut" type="number" min="0" step="any" value="0" aria-label="输出比例">
+        <span class="unit">输入 token 数 : 输出 token 数</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="hitRate">缓存命中率（占输入 tokens）</label>
+      <div class="input-row">
+        <input id="hitRate" type="number" min="0" max="100" step="any" value="0">
+        <span class="unit">%</span>
+      </div>
+      <input id="hitSlider" type="range" min="0" max="100" step="1" value="0" aria-label="缓存命中率滑块">
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>计算结果</h2>
+
+    <div class="result-total">总价格<strong id="outTotal">¥0.00</strong></div>
+    <div class="result-perm">实际单价 <b id="outPerM">¥0.00</b> / 百万 tokens</div>
+
+    <div class="bar" aria-hidden="true">
+      <span class="seg-miss" id="barMiss"></span>
+      <span class="seg-hit" id="barHit"></span>
+      <span class="seg-out" id="barOut"></span>
+    </div>
+    <div class="legend">
+      <span><i class="dot-miss"></i>输入·未命中 <b id="pctMiss">0%</b></span>
+      <span><i class="dot-hit"></i>输入·缓存命中 <b id="pctHit">0%</b></span>
+      <span><i class="dot-out"></i>输出 <b id="pctOut">0%</b></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>项目</th><th>Token 数</th><th>费用</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>输入（未命中）</td>
+          <td id="tokMiss">0</td>
+          <td id="costMiss">¥0.00</td>
+        </tr>
+        <tr>
+          <td>输入（缓存命中）</td>
+          <td id="tokHit">0</td>
+          <td id="costHit">¥0.00</td>
+        </tr>
+        <tr>
+          <td>输出</td>
+          <td id="tokOut">0</td>
+          <td id="costOut">¥0.00</td>
+        </tr>
+        <tr>
+          <td>合计</td>
+          <td id="tokTotal">0</td>
+          <td id="costTotal">¥0.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </section>
+</main>
+
+<footer>
+  <h3>计算公式</h3>
+  <code>输入 tokens = 总量 × 输入占比 ；输出 tokens = 总量 × 输出占比
+缓存命中 tokens = 输入 tokens × 命中率（按缓存价格计费），其余输入按输入价格计费
+总价格 = 输入(未命中)×输入价 + 输入(命中)×缓存价 + 输出×输出价
+实际单价 = 总价格 ÷ 总量（折算为元 / 百万 tokens）</code>
+</footer>
+
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+
+const els = {
+  priceIn: $('priceIn'),
+  priceOut: $('priceOut'),
+  priceCache: $('priceCache'),
+  totalTokens: $('totalTokens'),
+  ratioIn: $('ratioIn'),
+  ratioOut: $('ratioOut'),
+  hitRate: $('hitRate'),
+  hitSlider: $('hitSlider'),
+};
+
+function num(el) {
+  // 千分位逗号、空格不参与数值解析
+  const v = parseFloat(String(el.value).replace(/[,\s]/g, ''));
+  return Number.isFinite(v) ? v : 0;
+}
+
+function clamp(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+function fmtMoney(v) {
+  const abs = Math.abs(v);
+  const max = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: max });
+}
+
+function fmtInt(v) {
+  return Math.round(v).toLocaleString('zh-CN');
+}
+
+function fmtPct(v) {
+  return v.toLocaleString('zh-CN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+}
+
+// 千分位显示；编辑中按“光标前有几个数字”恢复光标，避免插入逗号后跳位
+function formatThousands(el) {
+  const raw = el.value;
+  const editing = document.activeElement === el;
+  const digitsBefore = editing ? raw.slice(0, el.selectionStart).replace(/\D/g, '').length : 0;
+
+  let cleaned = raw.replace(/[^\d.]/g, '');
+  const dot = cleaned.indexOf('.');
+  if (dot !== -1) cleaned = cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, '');
+  const [intPart, decPart] = cleaned.split('.');
+  el.value = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (decPart !== undefined ? '.' + decPart : '');
+
+  if (!editing) return;
+  let pos = 0, seen = 0;
+  while (pos < el.value.length && seen < digitsBefore) {
+    if (/\d/.test(el.value[pos])) seen++;
+    pos++;
+  }
+  el.setSelectionRange(pos, pos);
+}
+
+function compute() {
+  const pIn = Math.max(0, num(els.priceIn));
+  const pOut = Math.max(0, num(els.priceOut));
+  const pCache = Math.max(0, num(els.priceCache));
+  const total = Math.max(0, num(els.totalTokens));
+  let rIn = Math.max(0, num(els.ratioIn));
+  let rOut = Math.max(0, num(els.ratioOut));
+  // 0:0 是无效比例，按 1:1 处理，避免除零
+  if (rIn + rOut === 0) { rIn = 1; rOut = 1; }
+  const hit = clamp(num(els.hitRate), 0, 100) / 100;
+
+  const inTok = total * rIn / (rIn + rOut);
+  const outTok = total - inTok;
+  const hitTok = inTok * hit;
+  const missTok = inTok - hitTok;
+
+  const costMiss = missTok * pIn / 1e6;
+  const costHit = hitTok * pCache / 1e6;
+  const costOut = outTok * pOut / 1e6;
+  const cost = costMiss + costHit + costOut;
+
+  const perM = total > 0 ? cost / (total / 1e6) : 0;
+
+  return { total, inTok, outTok, hitTok, missTok, costMiss, costHit, costOut, cost, perM };
+}
+
+function pct(part, whole) {
+  return whole > 0 ? part / whole * 100 : 0;
+}
+
+function render() {
+  const r = compute();
+
+  $('outTotal').textContent = '¥' + fmtMoney(r.cost);
+  $('outPerM').textContent = '¥' + fmtMoney(r.perM);
+
+  $('barMiss').style.width = pct(r.costMiss, r.cost) + '%';
+  $('barHit').style.width = pct(r.costHit, r.cost) + '%';
+  $('barOut').style.width = pct(r.costOut, r.cost) + '%';
+  $('pctMiss').textContent = fmtPct(pct(r.costMiss, r.cost));
+  $('pctHit').textContent = fmtPct(pct(r.costHit, r.cost));
+  $('pctOut').textContent = fmtPct(pct(r.costOut, r.cost));
+
+  $('tokMiss').textContent = fmtInt(r.missTok);
+  $('tokHit').textContent = fmtInt(r.hitTok);
+  $('tokOut').textContent = fmtInt(r.outTok);
+  $('tokTotal').textContent = fmtInt(r.total);
+  $('costMiss').textContent = '¥' + fmtMoney(r.costMiss);
+  $('costHit').textContent = '¥' + fmtMoney(r.costHit);
+  $('costOut').textContent = '¥' + fmtMoney(r.costOut);
+  $('costTotal').textContent = '¥' + fmtMoney(r.cost);
+}
+
+function syncSlider() {
+  els.hitSlider.value = clamp(num(els.hitRate), 0, 100);
+}
+
+Object.values(els).forEach((el) => {
+  if (el === els.hitSlider) return;
+  el.addEventListener('input', () => {
+    // 命中率为 0-100 硬范围，越界即时归一，保证显示值与实际计算一致
+    if (el === els.hitRate && els.hitRate.value !== '') {
+      els.hitRate.value = clamp(num(els.hitRate), 0, 100);
+    }
+    // Token 总量千分位显示，便于读出位数
+    if (el === els.totalTokens) formatThousands(el);
+    syncSlider();
+    render();
+  });
+});
+
+els.hitSlider.addEventListener('input', () => {
+  els.hitRate.value = els.hitSlider.value;
+  render();
+});
+
+formatThousands(els.totalTokens);
+render();
+</script>
+</body>
+</html>
